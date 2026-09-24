@@ -909,7 +909,8 @@ export class UI {
     pedal(el.querySelector('.gas'), 'throttle');
     pedal(el.querySelector('.brake'), 'brake');
     this.touch = el;
-    this.root.appendChild(el);
+    // bottom of the UI stack: rebuilt mid-race (settings in the pause menu), it must stay under sheets and results
+    this.root.prepend(el);
   }
 
   /** Rebuild the touch controls after a touch setting changes. */
