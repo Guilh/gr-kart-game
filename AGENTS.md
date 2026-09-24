@@ -16,7 +16,7 @@ npx tsx scripts/simkb.ts assist 0.9  # keyboard-style driver, assists on/off
 npx tsx scripts/where.ts             # dump track geometry, racing line, speeds
 ```
 
-There's no unit-test framework. Verification is `npm run build`, `npm run sim:check`, and driving the game in a browser.
+Node 24 (`.nvmrc`, `engines`). There's no unit-test framework. Verification is `npm run build`, `npm run sim:check`, and driving the game in a browser. GitHub Actions (`.github/workflows/ci.yml`) runs the build, failing on any Vite warning, and `sim:check` on every push; a red check on `main` means the live site has a regression.
 
 ## Rules that aren't obvious from the code
 
@@ -36,8 +36,8 @@ Match the surrounding code: 2-space indent, single quotes, semicolons, long line
 
 ## Git and deploys
 
-- **`main` is production.** Vercel deploys every push to `main` to the public site. Commits that only touch `*.md` or `.claude/` skip the build (`scripts/vercel-ignore-build.sh`).
-- Work on a branch; a pushed branch gets a private Vercel preview at `gr-kart-sakura-circuit-git-<branch>-guilh1s-projects.vercel.app` (Vercel login required).
+- **`main` is production.** Vercel deploys every push to `main` to the public site. Pushes that only touch `*.md`, `.claude/`, `.github/` or `.editorconfig` skip the Vercel build (`scripts/vercel-ignore-build.sh`).
+- Work on a short-lived branch; a pushed branch gets CI and a private Vercel preview at `gr-kart-sakura-circuit-git-<branch>-guilh1s-projects.vercel.app` (Vercel login required). Merge into `main` with a fast-forward once CI is green, then delete the branch locally and on GitHub. `main` stays the only long-lived branch.
 - Ask the owner before pushing to `main`, force-pushing, or running `vercel --prod`, `promote`, `rollback`, `alias` or `remove`. A PreToolUse hook (`.claude/hooks/guard-release.mjs`) enforces this for Claude Code.
 - Commit as the GitHub no-reply address `1447850+Guilh@users.noreply.github.com` (already set as this repo's `user.email`). The owner's personal email must not appear in commits.
 - Never commit `.env*`, `.vercel/`, `dist/` or `node_modules/`.

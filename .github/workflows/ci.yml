@@ -1,0 +1,32 @@
+name: CI
+
+# Typecheck + production build (no warnings allowed) and the headless physics/AI regression gate.
+# Vercel deploys independently; this is the check that sim:check actually ran.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Build (tsc + vite, fails on any Vite warning)
+        run: |
+          npm run build 2>&1 | tee build.log
+          if grep -q '(!)' build.log; then echo '::error::vite build printed a warning'; exit 1; fi
+      - run: npm run sim:check
