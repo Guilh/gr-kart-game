@@ -1,0 +1,28 @@
+{
+  "name": "gr-kart-sakura-circuit",
+  "private": true,
+  "version": "1.0.0",
+  "description": "GR KART racing demo — procedural 3D go-kart racer built with Three.js",
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "sim:check": "tsx scripts/simcheck.ts"
+  },
+  "dependencies": {
+    "@fontsource/chakra-petch": "^5.3.0",
+    "@fontsource/titillium-web": "^5.3.0",
+    "three": "^0.186.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.186.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  }
+}
