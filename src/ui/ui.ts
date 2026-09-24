@@ -66,6 +66,8 @@ export class UI {
   results: HTMLElement | null = null;
   replayBar: HTMLElement | null = null;
   touch: HTMLElement | null = null;
+  /** Matches the CSS breakpoint above which the touch layout drops the minimap. */
+  private wide = matchMedia('(min-width: 761px)');
   private msgEl: HTMLElement;
   private msgTimer = 0;
   private splitsEl: HTMLElement;
@@ -480,6 +482,7 @@ export class UI {
           <div class="unit">KM/H</div>
           <div class="rpm">1750 RPM</div>
         </div>
+        <div class="tspeed"><b class="num">0</b><span>KM/H</span><i><em></em></i></div>
       </div>`);
     const q = (s: string) => el.querySelector(s) as HTMLElement;
     this.els = {
@@ -502,6 +505,9 @@ export class UI {
       minimap: q('.minimap'),
       thr: q('.pedals .thr i'),
       brk: q('.pedals .brk i'),
+      tspeed: q('.tspeed b'),
+      tunit: q('.tspeed span'),
+      tbar: q('.tspeed em'),
     };
     q('.pausebtn').addEventListener('click', () => this.input.pushAction('pause'));
     q('.cambtn').addEventListener('click', () => this.input.pushAction('camera'));
@@ -581,6 +587,12 @@ export class UI {
     e.rpmArc.setAttribute('stroke', d.rpm > 5800 ? '#e0001b' : '#f5f4f0');
     e.thr.style.height = `${d.throttle * 100}%`;
     e.brk.style.height = `${d.brake * 100}%`;
+    if (this.touch) {
+      this.set('tspeed', e.tspeed, String(Math.round(spd)));
+      this.set('tunit', e.tunit, units === 'mph' ? 'MPH' : 'KM/H');
+      e.tbar.style.width = `${frac * 100}%`;
+      e.tbar.classList.toggle('lim', d.rpm > 5800);
+    }
     this.set('lapn', e.lapn, mode === 'race' ? `${d.lapNo}/${d.laps}` : `${Math.max(1, d.lapNo)}`);
     this.set('lapc', e.lapc, `${d.lapNo}/${d.laps}`);
     this.set('curt', e.curt, formatTime(d.lapTime));
@@ -613,7 +625,8 @@ export class UI {
           .join('');
       }
     }
-    this.minimap?.draw(dots);
+    // hidden under the thumbs on touch layouts wider than a phone (see #hud.touch-mode in styles.css)
+    if (!(this.touch && this.wide.matches)) this.minimap?.draw(dots);
     this.drawG(d.latG, d.longG);
   }
 
@@ -843,6 +856,7 @@ export class UI {
     if (!on) {
       this.touch?.remove();
       this.touch = null;
+      this.hud.classList.remove('touch-mode');
       Object.assign(t, { active: false, steer: 0, throttle: 0, brake: 0 });
       return;
     }
@@ -857,6 +871,7 @@ export class UI {
       : h(`<div class="touch${auto ? ' auto' : ''}"><div class="steer"><i></i></div><div class="pad brake">BRAKE</div>${auto ? '' : '<div class="pad gas">GAS</div>'}</div>`);
     t.active = true;
     this.input.lastDevice = 'touch';
+    this.hud.classList.add('touch-mode');
     const steer = el.querySelector<HTMLElement>('.steer');
     if (steer) {
       const knob = steer.querySelector('i') as HTMLElement;
