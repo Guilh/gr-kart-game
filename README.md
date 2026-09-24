@@ -64,6 +64,10 @@ scripts/           Headless harnesses (solo laps, 8-kart races, keyboard driver)
 
 Physics runs at a fixed 240 Hz step, independent of the frame rate. The same physics and AI code runs headless in `scripts/`, which is how `npm run sim:check` checks lap times, spins and DNFs without a browser.
 
+## Contributing
+
+Project rules, the regression check, and git and deploy etiquette (pushing `main` deploys the live site) are in [`AGENTS.md`](AGENTS.md), which is also the instruction file for coding agents. [`PLAN.md`](PLAN.md) tracks status and the backlog.
+
 ## Disclaimer
 
 This is a fan-made tech demo, not affiliated with or endorsed by Toyota Motor Corporation or Toyota Gazoo Racing. "GR" and "GR KART" are used only to name the kart it's modelled on; the model is built from published dimensions. Sakura Circuit is fictional. It's a non-commercial project.

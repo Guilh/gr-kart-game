@@ -3,3 +3,5 @@ dist
 .DS_Store
 .vercel
 .env*
+CLAUDE.local.md
+.claude/settings.local.json

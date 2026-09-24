@@ -8,18 +8,7 @@ Paused 2026-09-23 (second session). This file is the hand-off: what's built, wha
 
 ## How to resume
 
-```bash
-npm run dev                              # http://localhost:5173
-npx tsc --noEmit                         # typecheck (passes as of pause)
-npx tsx scripts/sim.ts 0.925 3           # one AI kart, 3 laps (skill, laps)
-npx tsx scripts/sim8.ts 0.95 3 1         # 8-kart pack race (base skill, laps, seed)
-npx tsx scripts/simkb.ts assist 0.9      # keyboard-style driver, assists on/off
-npx tsx scripts/where.ts                 # dump track geometry, racing line, speeds
-npm run sim:check                        # regression gate over all harnesses (about 2 s)
-```
-
-URL flags: `?autopilot` (AI drives your kart, good for testing and hands-free demos), `?laps=N`.
-Debug hooks: add `?debug` to expose `window.app` and `window.THREE` in the console and log world-build timings.
+Commands, project rules and git/deploy etiquette are in `AGENTS.md`; Claude-specific notes, including how to drive the game in the Browser pane, are in `CLAUDE.md`. This file tracks status and the backlog.
 
 ## Where things stand
 
@@ -148,7 +137,7 @@ Goal: stop the game from running an M4 MacBook's fans hard.
 ## 10. Ship (session 3)
 
 - [x] Production build, `npm run preview`, smoke test (`?autopilot&laps=1` to results, showroom, no console errors), 375 px glance.
-  - 2026-09-24: `npm run build` is clean with no warnings (JS 193 + 377 + 425 kB, 68 + 101 + 105 kB gzipped; CSS 42 kB). `npm run preview` runs as `kart-preview` in `.claude/launch.json` (port 4173). Smoke test on the preview build at `?autopilot&laps=1&debug`, with `document.hidden` stubbed (see Testing notes) so the real rAF loop ran: clicked Race, then Start race; it ran in real time at 60 rendered fps and finished P3 in 54.15 s, and the results screen showed 8 rows. Main menu, then Showroom: it opens and renders. The console showed only the `?debug` timing log, with no errors or warnings, and every request returned 200. At 375×812 (mobile preset): no horizontal scroll, the disclaimer footer is fully visible, and the menu fits. Nit for the backlog: in Settings the segmented controls (Graphics, Frame rate cap, Camera, Time of day) wrap onto 2–4 lines. They're usable but busy.
+  - 2026-09-24: `npm run build` is clean with no warnings (JS 193 + 377 + 425 kB, 68 + 101 + 105 kB gzipped; CSS 42 kB). `npm run preview` runs as `kart-preview` in `.claude/launch.json` (port 4173). Smoke test on the preview build at `?autopilot&laps=1&debug`, with `document.hidden` stubbed (see `CLAUDE.md`) so the real rAF loop ran: clicked Race, then Start race; it ran in real time at 60 rendered fps and finished P3 in 54.15 s, and the results screen showed 8 rows. Main menu, then Showroom: it opens and renders. The console showed only the `?debug` timing log, with no errors or warnings, and every request returned 200. At 375×812 (mobile preset): no horizontal scroll, the disclaimer footer is fully visible, and the menu fits. Nit for the backlog: in Settings the segmented controls (Graphics, Frame rate cap, Camera, Time of day) wrap onto 2–4 lines. They're usable but busy.
 - [x] Deploy plan (Vercel; Cloudflare Pages as fallback). Ask before `git init`, the first commit and any deploy.
   - 2026-09-24, deployed: `vercel link` created `guilh1s-projects/gr-kart-sakura-circuit`, and one `vercel deploy` was run for the approved preview. **Vercel made it production anyway**, because a new CLI project's first deploy becomes production. It's live and public at https://gr-kart-sakura-circuit.vercel.app (deployment `dpl_A85gdgn6MnWdNc5AxuD7MZpfRDxS`); the owner was told. Checked: page and assets 200; `/assets/*` gets `max-age=31536000, immutable`; the HTML revalidates; og tags are absolute on the production URL; `.env.local` returns 404. The live page loads to the menu with no console errors, and its asset hashes match the locally smoke-tested build. Added `.vercelignore` (node_modules, dist, .env*, .DS_Store, .claude); `vercel link` wrote an OIDC token to `.env.local`, which is gitignored.
   - 2026-09-24: prepared, waiting for the owner's go-ahead. Nothing is committed or deployed.
@@ -176,6 +165,11 @@ Goal: stop the game from running an M4 MacBook's fans hard.
 - [x] Pre-launch review of the iPad branch (the owner can't test on a device yet).
   - 2026-09-24: found and fixed a stacking bug: the touch layer was re-appended on top of the UI whenever it was rebuilt mid-race (changing Tilt or Auto-accelerate from the pause menu's Settings), so on a phone in landscape the GAS zone covered the sheet's toggles. It's now `prepend`ed, so it sits under the HUD, sheets and results. Hit-tested at 740×390 with every Settings toggle and segment, the pause buttons, the results buttons and the HUD pause/camera buttons: all reachable, including where they overlap the zones. Status bar style changed from `black-translucent` to `black`, because the HUD doesn't pad for a translucent bar in home-screen mode. Desktop regression on the production build: no touch UI, keyboard steers, a 1-lap autopilot race to results (54.62 s, 8 rows), the showroom opens, the tilt settings are hidden, and no console errors. The manifest is served as `application/manifest+json`. `sim:check` was not needed (input and UI only).
 - [ ] Test on a real iPad: tilt feel (deadzone and full-lock angle), zone size, sound unlock, performance on Low. The Browser pane can't emulate iPad Safari or real sensors, and motion access needs HTTPS, so test on the branch's Vercel preview.
+
+## 12. Agent setup (session 3)
+
+- [x] `AGENTS.md`, `CLAUDE.md`, `.claude/settings.json`, release-guard hook, Vercel ignored build step.
+  - 2026-09-24: following code.claude.com/docs (memory, permissions, hooks). `AGENTS.md` holds the tool-neutral instructions; `CLAUDE.md` imports it with `@AGENTS.md` and adds Claude-only notes. With both present, Claude Code reads `CLAUDE.md` by default, so nothing loads twice. The PLAN "How to resume" commands and "Testing notes" moved there. `.claude/settings.json` allows build, typecheck and sim commands, has ask rules for force-push, pushes to main and production Vercel commands, and a PreToolUse hook (`.claude/hooks/guard-release.mjs`, exec form so the space in the path is safe). The hook uses a quote-aware lexer and recurses into `sh -c`, because Bash rules only match command text (`git -c … push` slips past `Bash(git push *)`). It returns `"ask"`, which the docs say still prompts in auto mode. 37/37 test commands classified correctly, including the exact `git -c credential.helper=… push origin main` form, bare `git push` on main, and commit messages that only mention `vercel --prod`; bad input fails open. `scripts/vercel-ignore-build.sh` (`ignoreCommand`) skips the build only when every change since `VERCEL_GIT_PREVIOUS_SHA` is `*.md` or `.claude/`, and builds when that SHA is empty or missing from the depth-10 clone; 9/9 cases checked in a scratch clone. `.gitignore` gains `CLAUDE.local.md` and `.claude/settings.local.json`. While writing the headless-module rule I found `core/input` (now importing `core/tilt`, which calls `matchMedia` at load) is imported by `kartPhysics` and `ai`. Both are `import type`, so it's safe; `sim:check` passes at the exact baseline (55 spins, laps in band) and the rule is now in `AGENTS.md`.
 
 ## Post-launch backlog
 
@@ -221,10 +215,3 @@ Deferred in session 3 (2026-09-24) to ship the first pass. Notes are kept as the
 - [ ] A big screen on the control tower showing a live TV-camera feed.
 - [ ] A replay director that follows the closest battle instead of picking at random.
 - [ ] Shorter terrain build (about 1.5 s now): cache projections or reduce resolution.
-
-## Testing notes (session 2)
-
-- Since session 3, open the page with `?debug` (for example `/?debug&autopilot`) or `window.app` won't exist. The loop also skips frames while `document.hidden` is true, and the Browser pane reports hidden even when rAF runs. Stub it (`Object.defineProperty(document, 'hidden', { configurable: true, get: () => false })`) or step the game by hand as below.
-
-- With the Browser pane hidden, `requestAnimationFrame` doesn't run and screenshots lag one render behind. Drive the game from the console instead: step `app.race.update(dt, app.input)` and `app.world.update(...)` in a loop (a 1-lap race takes about 0.2 s), render with `app.renderer.render(...)`, and take two screenshots.
-- Wrap `app.showroom.update` in a no-op and step it by hand. Otherwise the app loop's real-time updates start auto-rotate between steps.
