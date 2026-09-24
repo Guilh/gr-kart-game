@@ -74,3 +74,5 @@ This is a fan-made tech demo, not affiliated with or endorsed by Toyota Motor Co
 - [Titillium Web](https://fonts.google.com/specimen/Titillium+Web) and [Chakra Petch](https://fonts.google.com/specimen/Chakra+Petch) typefaces (SIL Open Font License), via [Fontsource](https://fontsource.org)
 - [Vite](https://vite.dev) and [TypeScript](https://www.typescriptlang.org)
 - Built with Claude Opus 5.5
+
+The full license texts of the bundled libraries and fonts ship with the site at `/third-party-licenses.md`. `npm run build` generates the file.

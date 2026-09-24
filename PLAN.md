@@ -2,7 +2,7 @@
 
 Paused 2026-09-23 (second session). This file is the hand-off: what's built, what's verified, and what still needs building, checking and testing.
 
-**Session 3 status (2026-09-24):** launch prep. Section 9 (thermal and performance) is done, section 7 hygiene is done except unit checks and git, and 10.1 (build, preview, smoke test) is done. Stopped at 10.2: the deploy plan is written and waiting for the owner's approval of `git init`, the first commit and the deploy. `tsc`, `npm run build` (no warnings) and the preview smoke test pass. `sim:check` wasn't needed (no physics or AI changes). Items 3.7–3.10 and sections 4, 5, 6 and 8 are in the post-launch backlog.
+**Session 3 status (2026-09-24):** launch prep. Section 9 (thermal and performance) is done, section 7 hygiene is done except unit checks and git, and 10.1 (build, preview, smoke test) is done. Git: first commit `47fae7c`; `PLAN.md` edits and `.vercelignore` are uncommitted. Deployed: the first `vercel deploy` went straight to production (Vercel's behaviour for a new project), so the game is public at https://gr-kart-sakura-circuit.vercel.app. Waiting on the owner: keep it public, or take it down. `tsc`, `npm run build` (no warnings) and the preview smoke test pass. `sim:check` wasn't needed (no physics or AI changes). Items 3.7–3.10 and sections 4, 5, 6 and 8 are in the post-launch backlog.
 
 **Session 2 status (2026-09-23):** sections 1 and 2 are done, and section 3 is done through item 6. Next is 3.7 (lap-1 pile-ups): the spin-location analysis is below, but no AI change has been made yet. At the end of the session `tsc`, `vite build` and `npm run sim:check` all pass.
 
@@ -100,6 +100,8 @@ Items 3.7–3.10 moved to the post-launch backlog (session 3).
   - 2026-09-24: done; see 10.1.
 - [x] Turn the harnesses into a regression check (for example `npm run sim:check`) that fails on any DNF, on more than 14 spins per 8-kart race, or on lap times outside the per-difficulty bands above.
   - 2026-09-23: `scripts/simcheck.ts` (`npm run sim:check`) runs the existing harnesses in parallel. Solo bands are ±1 s around 50.8, 47.3 and 44.8. It also fails on a solo spin or off-track, and on a keyboard-with-assists spin, and prints the pack spin total against the recorded 55.
+- [x] Ship third-party license notices (post-deploy review).
+  - 2026-09-24: minification stripped three.js's `@license` header, and the fonts ship with no notice. `build.license` in `vite.config.ts` writes `dist/third-party-licenses.md` (three, MIT), and a small `font-licenses` plugin appends the two Fontsource OFL texts (build.license only sees JS modules). Credited in the README. Committed; not yet on the live site until the next `vercel deploy --prod`.
 - [ ] Small unit checks: track projection round-trip, racing-line limits, ghost encode/decode.
   - 2026-09-24: not in session 3's scope; still open.
 - [x] Remove leftovers: unused `void` statements, the `lerp` re-export in `kartModel.ts`, the `DIM` re-export in `race.ts`, the unused `flags` array and `lastLapFlash`. Gate `window.app` behind `?debug`.
@@ -114,7 +116,8 @@ Items 3.7–3.10 moved to the post-launch backlog (session 3).
   - 2026-09-24: unchanged in the menu footer. Also in the README and the meta description.
 - [x] README: controls, architecture overview, URL flags, the fan-made/not-affiliated disclaimer, credits.
   - 2026-09-24: `README.md`; it also covers the graphics/battery options and the `npm` scripts.
-- [ ] The project isn't a git repo yet. `git init` and a first commit, if the owner wants that.
+- [x] The project isn't a git repo yet. `git init` and a first commit, if the owner wants that.
+  - 2026-09-24: approved by the owner. `git init -b main`, first commit `47fae7c` (52 files; no `node_modules`, `dist` or `.DS_Store`). No GitHub remote yet; the owner doesn't have a repo. The Vercel CLI deploy doesn't need one.
 
 ## 9. Thermal and performance (session 3)
 
@@ -146,7 +149,8 @@ Goal: stop the game from running an M4 MacBook's fans hard.
 
 - [x] Production build, `npm run preview`, smoke test (`?autopilot&laps=1` to results, showroom, no console errors), 375 px glance.
   - 2026-09-24: `npm run build` is clean with no warnings (JS 193 + 377 + 425 kB, 68 + 101 + 105 kB gzipped; CSS 42 kB). `npm run preview` runs as `kart-preview` in `.claude/launch.json` (port 4173). Smoke test on the preview build at `?autopilot&laps=1&debug`, with `document.hidden` stubbed (see Testing notes) so the real rAF loop ran: clicked Race, then Start race; it ran in real time at 60 rendered fps and finished P3 in 54.15 s, and the results screen showed 8 rows. Main menu, then Showroom: it opens and renders. The console showed only the `?debug` timing log, with no errors or warnings, and every request returned 200. At 375×812 (mobile preset): no horizontal scroll, the disclaimer footer is fully visible, and the menu fits. Nit for the backlog: in Settings the segmented controls (Graphics, Frame rate cap, Camera, Time of day) wrap onto 2–4 lines. They're usable but busy.
-- [ ] Deploy plan (Vercel; Cloudflare Pages as fallback). Ask before `git init`, the first commit and any deploy.
+- [x] Deploy plan (Vercel; Cloudflare Pages as fallback). Ask before `git init`, the first commit and any deploy.
+  - 2026-09-24, deployed: `vercel link` created `guilh1s-projects/gr-kart-sakura-circuit`, and one `vercel deploy` was run for the approved preview. **Vercel made it production anyway**, because a new CLI project's first deploy becomes production. It's live and public at https://gr-kart-sakura-circuit.vercel.app (deployment `dpl_A85gdgn6MnWdNc5AxuD7MZpfRDxS`); the owner was told. Checked: page and assets 200; `/assets/*` gets `max-age=31536000, immutable`; the HTML revalidates; og tags are absolute on the production URL; `.env.local` returns 404. The live page loads to the menu with no console errors, and its asset hashes match the locally smoke-tested build. Added `.vercelignore` (node_modules, dist, .env*, .DS_Store, .claude); `vercel link` wrote an OIDC token to `.env.local`, which is gitignored.
   - 2026-09-24: prepared, waiting for the owner's go-ahead. Nothing is committed or deployed.
     - `vercel.json`: Vite framework, `npm ci`, `npm run build`, output `dist`, and `Cache-Control: public, max-age=31536000, immutable` on `/assets/*` (hashed files). Other files keep Vercel's default (revalidate).
     - `package.json` `engines.node` is `24.x`, matching local Node 24.11. The lockfile already has the linux-x64 native binaries (Rolldown, lightningcss, esbuild, TypeScript 7).
