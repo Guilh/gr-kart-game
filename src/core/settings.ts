@@ -17,6 +17,10 @@ export interface Settings {
   showFps: boolean;
   /** Frame-rate cap; 0 = uncapped (display refresh rate). */
   fpsCap: number;
+  /** Touch devices: steer by rotating the device (needs motion-sensor permission on iOS). */
+  tiltSteer: boolean;
+  /** Touch devices: throttle is held automatically; the brake still works. */
+  autoGas: boolean;
   playerName: string;
 }
 
@@ -33,6 +37,8 @@ const DEFAULTS: Settings = {
   catchup: true,
   showFps: false,
   fpsCap: 60,
+  tiltSteer: false,
+  autoGas: false,
   playerName: 'YOU',
 };
 

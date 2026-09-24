@@ -30,7 +30,7 @@ npm run sim:check  # headless physics/AI regression check (about 2 s)
 | Space, [ / ] | Replay: pause, previous or next kart |
 
 **Gamepad:** RT throttle, LT brake, left stick steers, Y camera, X look back, Start pause.
-**Touch:** on-screen controls appear on phones and tablets.
+**Touch:** on-screen controls appear on phones and tablets: a steering pad on the left, GAS and BRAKE on the right. In Settings, **Tilt to steer** lets you hold the screen like a steering wheel (right thumb gas, left thumb brake; the straight-ahead position is taken during the start countdown), and **Auto-accelerate** holds the throttle for you. On iPad and iPhone, *Add to Home Screen* opens the game full screen.
 
 ## URL flags
 

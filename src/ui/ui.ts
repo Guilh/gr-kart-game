@@ -3,6 +3,7 @@ import { formatTime, clamp } from '../core/math';
 import { GR_KART_SPEC } from '../kart/kartSpecs';
 import type { ResultRow, Standing } from '../game/race';
 import type { Input } from '../core/input';
+import { IS_TOUCH, TiltSteer } from '../core/tilt';
 import { Minimap, MapDot } from './minimap';
 import type { Track } from '../track/track';
 import { audio } from '../audio/audio';
@@ -246,7 +247,7 @@ export class UI {
     return wrap;
   }
 
-  private toggle(key: 'steeringAssist' | 'catchup' | 'showFps') {
+  private toggle(key: 'steeringAssist' | 'catchup' | 'showFps' | 'autoGas') {
     const b = h(`<button class="toggle" role="switch"></button>`) as HTMLButtonElement;
     const upd = () => {
       b.classList.toggle('on', !!settings.get(key));
@@ -258,6 +259,33 @@ export class UI {
       upd();
       audio.click();
       this.handlers.settingChanged(key);
+    };
+    return b;
+  }
+
+  /** Like toggle(), but switching on asks for motion access first (iOS prompts here, inside the tap). */
+  private tiltToggle() {
+    const b = h(`<button class="toggle" role="switch"></button>`) as HTMLButtonElement;
+    const upd = () => {
+      b.classList.toggle('on', settings.get('tiltSteer'));
+      b.setAttribute('aria-checked', String(settings.get('tiltSteer')));
+    };
+    upd();
+    b.onclick = () => {
+      audio.click();
+      if (settings.get('tiltSteer')) {
+        settings.set('tiltSteer', false);
+        this.input.tilt.disable();
+        upd();
+        this.handlers.settingChanged('tiltSteer');
+        return;
+      }
+      this.input.tilt.enable().then((ok) => {
+        if (ok) settings.set('tiltSteer', true);
+        else this.message('Motion access was declined. Allow it for this site in Safari settings to use tilt steering.', 'bad', 4);
+        upd();
+        this.handlers.settingChanged('tiltSteer');
+      });
     };
     return b;
   }
@@ -380,6 +408,8 @@ export class UI {
     };
     el.appendChild(this.row('Volume', '', vol));
     el.appendChild(this.row('Steering assist', '', this.toggle('steeringAssist')));
+    if (TiltSteer.supported) el.appendChild(this.row('Tilt to steer', 'Hold the screen like a wheel: right thumb gas, left thumb brake', this.tiltToggle()));
+    if (IS_TOUCH) el.appendChild(this.row('Auto-accelerate', 'The kart drives itself forward; you steer and brake', this.toggle('autoGas')));
     el.appendChild(this.row('Show FPS', '', this.toggle('showFps')));
     const actions = h(`<div class="actions"><button class="btn primary"><span>Done</span></button></div>`);
     actions.querySelector('button')!.addEventListener('click', () => {
@@ -809,46 +839,65 @@ export class UI {
 
   // ---------------------------------------------------------------- touch
   enableTouch(on: boolean) {
+    const t = this.input.touch;
     if (!on) {
       this.touch?.remove();
       this.touch = null;
-      this.input.touch.active = false;
+      Object.assign(t, { active: false, steer: 0, throttle: 0, brake: 0 });
       return;
     }
     if (this.touch) return;
-    const el = h(`<div class="touch"><div class="steer"><i></i></div><div class="pad brake" style="right:128px">BRAKE</div><div class="pad gas" style="right:20px;bottom:74px">GAS</div></div>`);
-    const steer = el.querySelector('.steer') as HTMLElement;
-    const knob = steer.querySelector('i') as HTMLElement;
-    const gas = el.querySelector('.gas') as HTMLElement;
-    const brake = el.querySelector('.brake') as HTMLElement;
-    const t = this.input.touch;
+    // Tilt: the hands hold the device like a wheel, so the thumbs get tall zones on each edge
+    // (left brake, right gas). Otherwise: a steering pad on the left, pedals on the right.
+    const tilt = this.input.tilt.enabled;
+    const auto = settings.get('autoGas');
+    t.autoGas = auto;
+    const el = tilt
+      ? h(`<div class="touch tilt${auto ? ' auto' : ''}"><div class="zone brake"><span>BRAKE</span></div>${auto ? '' : '<div class="zone gas"><span>GAS</span></div>'}<div class="tilt-hint">Hold the screen up, like a steering wheel</div></div>`)
+      : h(`<div class="touch${auto ? ' auto' : ''}"><div class="steer"><i></i></div><div class="pad brake">BRAKE</div>${auto ? '' : '<div class="pad gas">GAS</div>'}</div>`);
     t.active = true;
-    let steerId = -1;
-    const steerMove = (x: number) => {
-      const r = steer.getBoundingClientRect();
-      const v = clamp(((x - r.left) / r.width) * 2 - 1, -1, 1);
-      t.steer = v;
-      knob.style.transform = `translateX(${v * (r.width / 2 - 40)}px)`;
-    };
-    steer.addEventListener('pointerdown', (e) => {
-      steerId = e.pointerId;
-      steer.setPointerCapture(e.pointerId);
-      steerMove(e.clientX);
-    });
-    steer.addEventListener('pointermove', (e) => e.pointerId === steerId && steerMove(e.clientX));
-    const endSteer = (e: PointerEvent) => {
-      if (e.pointerId !== steerId) return;
-      steerId = -1;
-      t.steer = 0;
-      knob.style.transform = '';
-    };
-    steer.addEventListener('pointerup', endSteer);
-    steer.addEventListener('pointercancel', endSteer);
-    const pedal = (elp: HTMLElement, key: 'throttle' | 'brake') => {
+    this.input.lastDevice = 'touch';
+    const steer = el.querySelector<HTMLElement>('.steer');
+    if (steer) {
+      const knob = steer.querySelector('i') as HTMLElement;
+      let steerId = -1;
+      const steerMove = (x: number) => {
+        const r = steer.getBoundingClientRect();
+        const v = clamp(((x - r.left) / r.width) * 2 - 1, -1, 1);
+        t.steer = v;
+        knob.style.transform = `translateX(${v * (r.width / 2 - 40)}px)`;
+      };
+      steer.addEventListener('pointerdown', (e) => {
+        steerId = e.pointerId;
+        this.input.lastDevice = 'touch';
+        steerMove(e.clientX);
+        try {
+          steer.setPointerCapture(e.pointerId);
+        } catch {
+          /* pointer already gone */
+        }
+      });
+      steer.addEventListener('pointermove', (e) => e.pointerId === steerId && steerMove(e.clientX));
+      const endSteer = (e: PointerEvent) => {
+        if (e.pointerId !== steerId) return;
+        steerId = -1;
+        t.steer = 0;
+        knob.style.transform = '';
+      };
+      steer.addEventListener('pointerup', endSteer);
+      steer.addEventListener('pointercancel', endSteer);
+    }
+    const pedal = (elp: HTMLElement | null, key: 'throttle' | 'brake') => {
+      if (!elp) return;
       elp.addEventListener('pointerdown', (e) => {
-        elp.setPointerCapture(e.pointerId);
+        this.input.lastDevice = 'touch';
         t[key] = 1;
         elp.classList.add('active');
+        try {
+          elp.setPointerCapture(e.pointerId); // keep the press if the thumb slides off the zone
+        } catch {
+          /* pointer already gone */
+        }
       });
       const up = () => {
         t[key] = 0;
@@ -857,10 +906,23 @@ export class UI {
       elp.addEventListener('pointerup', up);
       elp.addEventListener('pointercancel', up);
     };
-    pedal(gas, 'throttle');
-    pedal(brake, 'brake');
+    pedal(el.querySelector('.gas'), 'throttle');
+    pedal(el.querySelector('.brake'), 'brake');
     this.touch = el;
     this.root.appendChild(el);
+  }
+
+  /** Rebuild the touch controls after a touch setting changes. */
+  refreshTouch() {
+    if (!this.touch) return;
+    this.enableTouch(false);
+    this.enableTouch(true);
+  }
+
+  /** Per frame: show the "hold it up" hint while tilt steering can't read the device (held flat). */
+  updateTouch() {
+    const tilt = this.input.tilt;
+    this.touch?.classList.toggle('flat', tilt.enabled && !tilt.holding);
   }
 
   // ------------------------------------------------------------------ fps

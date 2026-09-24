@@ -4,6 +4,7 @@ import { Renderer } from './render/renderer';
 import { Input } from './core/input';
 import { settings } from './core/settings';
 import { DEBUG } from './core/debug';
+import { IS_TOUCH } from './core/tilt';
 import { World } from './game/world';
 import { Race, RaceOptions } from './game/race';
 import { UI } from './ui/ui';
@@ -31,7 +32,7 @@ class App {
   private last = performance.now();
   /** Earliest rAF timestamp the next frame may render at (frame cap). */
   private nextFrame = 0;
-  private isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 1;
+  private isTouch = IS_TOUCH;
 
   constructor() {
     this.ui = new UI(
@@ -162,6 +163,16 @@ class App {
     this.ui.showMenu(false);
     this.ui.showHud(true, mode);
     this.ui.enableTouch(this.isTouch);
+    if (this.isTouch && settings.get('tiltSteer')) {
+      // re-arm inside this tap: iOS only shows (or re-confirms) motion access from a user gesture
+      this.input.tilt.enable().then((ok) => {
+        if (!ok) {
+          settings.set('tiltSteer', false);
+          this.ui.message('Tilt steering needs motion access. Using the steering pad.', 'info', 3);
+        }
+        this.ui.refreshTouch();
+      });
+    }
     this.input.clearActions();
     this.canvas.focus();
   }
@@ -216,6 +227,7 @@ class App {
   onSetting(k: string) {
     if (k === 'quality') this.renderer.setQuality(settings.get('quality'));
     if (k === 'timeOfDay') this.world.setTimeOfDay(settings.get('timeOfDay'));
+    if (k === 'tiltSteer' || k === 'autoGas') this.ui.refreshTouch();
     if (k === 'steeringAssist' && this.race?.player) this.race.player.phys.assist = settings.get('steeringAssist');
     if (k === 'camera' && this.race && this.mode === 'race') {
       const c = settings.get('camera') as RigMode;
@@ -292,6 +304,18 @@ class App {
         }
         this.ui.updateHud(race.hud(), race.standings(), race.mode === 'timetrial' ? 'timetrial' : 'race', dots);
       }
+      const tilt = this.input.tilt;
+      if (tilt.enabled) {
+        // "straight ahead" is however the player holds the device while the lights count down
+        if (race.state === 'intro' || race.state === 'countdown') tilt.recenter();
+        if (tilt.noSensor) {
+          tilt.disable();
+          settings.set('tiltSteer', false);
+          this.ui.message('No motion sensor found. Using the steering pad.', 'info', 3);
+          this.ui.refreshTouch();
+        }
+      }
+      this.ui.updateTouch();
       const spd = Math.abs(race.focus.phys.speed);
       const cockpit = race.rig.mode === 'cockpit';
       this.renderer.setSpeedFx(race.state === 'replay' ? 0 : Math.max(0, (spd - 12) / 12) * (cockpit ? 0.6 : 1), 0.5);

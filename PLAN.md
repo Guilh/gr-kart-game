@@ -2,7 +2,7 @@
 
 Paused 2026-09-23 (second session). This file is the hand-off: what's built, what's verified, and what still needs building, checking and testing.
 
-**Session 3 status (2026-09-24):** launch prep. Section 9 (thermal and performance) is done, section 7 hygiene is done except unit checks and git, and 10.1 (build, preview, smoke test) is done. Git: https://github.com/Guilh/gr-kart-game (public). Commit emails were rewritten locally to the GitHub no-reply address `1447850+Guilh@users.noreply.github.com` (repo-local `user.email` is set to it), but the permission system blocked the force-push, so GitHub still has the old commits until the owner runs `git push --force-with-lease origin main`. `vercel git connect` failed: the Vercel GitHub App needs to be installed or authorized for the repo from the Vercel dashboard, then pushes to `main` deploy production. Deployed: the first `vercel deploy` went straight to production (Vercel's behaviour for a new project), so the game is public at https://gr-kart-sakura-circuit.vercel.app. The owner is fine with it being public. Open: the owner connects the repo in Vercel, then force-pushes (that push deploys the license notices); the sound check; the GR-style logo decision. `tsc`, `npm run build` (no warnings) and the preview smoke test pass. `sim:check` wasn't needed (no physics or AI changes). Items 3.7–3.10 and sections 4, 5, 6 and 8 are in the post-launch backlog.
+**Session 3 status (2026-09-24):** launch prep. Section 9 (thermal and performance) is done, section 7 hygiene is done except unit checks and git, and 10.1 (build, preview, smoke test) is done. Git: https://github.com/Guilh/gr-kart-game (public), connected to Vercel: every push to `main` deploys production (checked: the owner's force-push produced a Ready production deploy within a minute). Commit emails were rewritten to the GitHub no-reply `1447850+Guilh@users.noreply.github.com` (repo-local `user.email`); the GitHub API shows 0 commits with the old email. Caveat: the old commits (such as `47fae7c`) are still reachable on GitHub by direct SHA. Removing them means deleting and recreating the repo (then reconnecting Vercel) or asking GitHub Support. The license notices are live at `/third-party-licenses.md`. Open: the sound check and the GR-style logo decision.
 
 **Session 2 status (2026-09-23):** sections 1 and 2 are done, and section 3 is done through item 6. Next is 3.7 (lap-1 pile-ups): the spin-location analysis is below, but no AI change has been made yet. At the end of the session `tsc`, `vite build` and `npm run sim:check` all pass.
 
@@ -101,7 +101,7 @@ Items 3.7–3.10 moved to the post-launch backlog (session 3).
 - [x] Turn the harnesses into a regression check (for example `npm run sim:check`) that fails on any DNF, on more than 14 spins per 8-kart race, or on lap times outside the per-difficulty bands above.
   - 2026-09-23: `scripts/simcheck.ts` (`npm run sim:check`) runs the existing harnesses in parallel. Solo bands are ±1 s around 50.8, 47.3 and 44.8. It also fails on a solo spin or off-track, and on a keyboard-with-assists spin, and prints the pack spin total against the recorded 55.
 - [x] Ship third-party license notices (post-deploy review).
-  - 2026-09-24: minification stripped three.js's `@license` header, and the fonts ship with no notice. `build.license` in `vite.config.ts` writes `dist/third-party-licenses.md` (three, MIT), and a small `font-licenses` plugin appends the two Fontsource OFL texts (build.license only sees JS modules). Credited in the README. Committed and pushed; not on the live site yet. The `vercel deploy --prod` from this session was blocked by the permission system, so the owner needs to run it (or connect the repo to Vercel).
+  - 2026-09-24: minification stripped three.js's `@license` header, and the fonts ship with no notice. `build.license` in `vite.config.ts` writes `dist/third-party-licenses.md` (three, MIT), and a small `font-licenses` plugin appends the two Fontsource OFL texts (build.license only sees JS modules). Credited in the README. Live since the owner's push to the Git-connected project.
 - [ ] Small unit checks: track projection round-trip, racing-line limits, ghost encode/decode.
   - 2026-09-24: not in session 3's scope; still open.
 - [x] Remove leftovers: unused `void` statements, the `lerp` re-export in `kartModel.ts`, the `DIM` re-export in `race.ts`, the unused `flags` array and `lastLapFlash`. Gate `window.app` behind `?debug`.
@@ -158,6 +158,22 @@ Goal: stop the game from running an M4 MacBook's fans hard.
     - The Vercel CLI 56.3.2 is installed but not logged in (invalid token), so the owner logs in.
     - Steps: `vercel login`, `vercel link` (new project `gr-kart-sakura-circuit`), `vercel deploy` (preview; Hobby previews sit behind Vercel login by default), check it, `vercel deploy --prod`. After deploy: `curl -I` an `/assets/*.js` for the immutable header, view-source for absolute og tags, and a smoke test on the live URL.
     - Cloudflare Pages fallback: `public/_headers` with the same `/assets/*` rule, `SITE_URL=https://<project>.pages.dev npm run build`, then `npx wrangler pages deploy dist`.
+
+## 11. iPad play (session 3, after launch)
+
+- [x] Tilt steering, with thumb-zone pedals.
+  - 2026-09-24: `src/core/tilt.ts` (`TiltSteer`) reads `devicemotion` gravity and steers by its rotation within the device's x–y plane, relative to the pose held during the intro and countdown (`recenter()` every frame in those states). Because it's relative and in-plane, it reads the same in portrait, either landscape and upside down, at any backward lean, and whether the platform reports gravity or its reaction; checked with synthetic events in all six cases. Tuning: 2.5° deadzone, full lock at 28°, response curve ^1.2, ~40 ms low-pass. Below 2.5 m/s² of in-plane gravity (held flat) it stops reading, eases to centre and shows a "hold the screen up" hint. The Settings row "Tilt to steer" (touch devices with `DeviceMotionEvent` only) asks for motion access inside the tap; iOS's `requestPermission` is called again on every race start (also a tap). If declined, or no sensor answers within 1.5 s, it falls back to the steering pad with a message. In tilt mode the touch layout is two tall edge zones, left BRAKE and right GAS, starting 32% down to clear the HUD buttons. Checked by stepping `app.loop` with streamed synthetic motion: 15° gives ±0.43 steer and the kart turns; the brake zone takes 45 → 34 km/h.
+- [x] Auto-accelerate (touch only).
+  - 2026-09-24: `autoGas` setting. Throttle is 1 unless braking; the GAS pad or zone is hidden and BRAKE moves to its place. Holding throttle on the grid only revs, with no false-start rule.
+- [x] Touch no longer overrides a keyboard or gamepad on touch devices.
+  - 2026-09-24: bug: `Input.update` used touch values whenever touch controls existed, i.e. always on a tablet, so a Magic Keyboard or controller did nothing. Touch now drives only while `lastDevice === 'touch'` (set when the controls appear and on any touch). Checked: a keyboard press takes over and a tap hands control back.
+- [x] Auto quality detects iPads.
+  - 2026-09-24: iPadOS Safari sends a Mac user agent, so iPads got Medium. `Macintosh` plus `maxTouchPoints > 1` now counts as mobile, giving Low (touch-screen Windows laptops are unaffected).
+- [x] Home-screen web app.
+  - 2026-09-24: `public/manifest.webmanifest` (fullscreen, landscape, icons) plus `apple-mobile-web-app-capable`, `status-bar-style` (black-translucent) and `apple-mobile-web-app-title`.
+- [x] Safe-area padding for touch controls.
+  - 2026-09-24: the pads, steering pad and zones use `env(safe-area-inset-*)`; their inline positions moved to CSS. Pixel positions at 740×390 are unchanged from before.
+- [ ] Test on a real iPad: tilt feel (deadzone and full-lock angle), zone size, sound unlock, performance on Low. The Browser pane can't emulate iPad Safari or real sensors, and motion access needs HTTPS, so test on the branch's Vercel preview.
 
 ## Post-launch backlog
 

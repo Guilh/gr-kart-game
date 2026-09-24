@@ -109,7 +109,10 @@ export class Renderer {
     this.auto = q === 'auto';
     const dpr = window.devicePixelRatio || 1;
     let eff: Tier = q === 'auto' ? (dpr > 1.5 ? 'medium' : 'high') : q === 'battery' ? 'medium' : q;
-    if (q === 'auto' && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) eff = 'low';
+    // iPadOS Safari reports a Mac user agent; a "Mac" with multi-touch is an iPad
+    const ua = navigator.userAgent;
+    const mobile = /Mobi|Android|iPhone|iPad/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    if (q === 'auto' && mobile) eff = 'low';
     this.quality = eff;
     const battery = q === 'battery';
     // High stops at 1.5× — above that the extra pixels cost far more heat than they show

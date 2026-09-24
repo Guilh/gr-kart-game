@@ -1,4 +1,5 @@
 import { clamp, moveTowards } from './math';
+import { TiltSteer } from './tilt';
 
 export interface DriveControls {
   steer: number; // -1 (left) .. +1 (right)
@@ -54,7 +55,8 @@ export class Input {
   controls: DriveControls = { steer: 0, throttle: 0, brake: 0 };
   lookBack = false;
 
-  touch = { steer: 0, throttle: 0, brake: 0, active: false };
+  touch = { steer: 0, throttle: 0, brake: 0, active: false, autoGas: false };
+  tilt = new TiltSteer();
 
   private kbSteer = 0;
   private kbThrottle = 0;
@@ -141,10 +143,11 @@ export class Input {
       break;
     }
 
-    if (this.touch.active) {
-      this.lastDevice = 'touch';
-      steer = this.touch.steer;
-      throttle = this.touch.throttle;
+    // Touch drives only while it's the last device used, so a keyboard or pad paired to a tablet still works.
+    this.tilt.update(dt);
+    if (this.touch.active && this.lastDevice === 'touch') {
+      steer = this.tilt.enabled ? this.tilt.steer : this.touch.steer;
+      throttle = this.touch.autoGas ? (this.touch.brake > 0 ? 0 : 1) : this.touch.throttle;
       brake = this.touch.brake;
     }
 

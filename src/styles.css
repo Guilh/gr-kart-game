@@ -1220,10 +1220,24 @@ kbd {
 .touch .pad.active {
   background: rgba(255, 255, 255, 0.3);
 }
+/* safe-area insets keep the controls clear of the home indicator and rounded corners */
+.touch .pad {
+  bottom: calc(24px + env(safe-area-inset-bottom));
+}
+.touch .pad.brake {
+  right: calc(128px + env(safe-area-inset-right));
+}
+.touch .pad.gas {
+  right: calc(20px + env(safe-area-inset-right));
+  bottom: calc(74px + env(safe-area-inset-bottom));
+}
+.touch.auto .pad.brake {
+  right: calc(20px + env(safe-area-inset-right));
+}
 .touch .steer {
   position: absolute;
-  left: 18px;
-  bottom: 24px;
+  left: calc(18px + env(safe-area-inset-left));
+  bottom: calc(24px + env(safe-area-inset-bottom));
   width: 210px;
   height: 92px;
   border-radius: 46px;
@@ -1240,6 +1254,59 @@ kbd {
   margin-left: -32px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.5);
+}
+
+/* tilt steering: tall thumb zones on each edge, clear of the HUD buttons at the top */
+.touch .zone {
+  position: absolute;
+  top: 32%;
+  bottom: 0;
+  width: min(26vw, 280px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: calc(28px + env(safe-area-inset-bottom));
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.55);
+  pointer-events: auto;
+  -webkit-touch-callout: none;
+}
+.touch .zone.brake {
+  left: 0;
+  padding-left: env(safe-area-inset-left);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+}
+.touch .zone.gas {
+  right: 0;
+  padding-right: env(safe-area-inset-right);
+  background: linear-gradient(270deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+}
+.touch .zone.active {
+  color: #fff;
+}
+.touch .zone.brake.active {
+  background: linear-gradient(90deg, rgba(224, 0, 27, 0.35), rgba(224, 0, 27, 0));
+}
+.touch .zone.gas.active {
+  background: linear-gradient(270deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
+}
+.touch .tilt-hint {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translateX(-50%);
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.65);
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+  display: none;
+}
+.touch.flat .tilt-hint {
+  display: block;
 }
 
 @media (max-width: 760px) {

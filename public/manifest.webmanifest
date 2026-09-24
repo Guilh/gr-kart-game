@@ -1,0 +1,15 @@
+{
+  "name": "GR KART · Sakura Circuit",
+  "short_name": "GR KART",
+  "description": "Browser go-kart racing demo. Fan-made, not affiliated with Toyota.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0b0b0d",
+  "theme_color": "#0b0b0d",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
