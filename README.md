@@ -1,5 +1,7 @@
 # GR KART · Sakura Circuit
 
+[![CI](https://github.com/Guilh/gr-kart-game/actions/workflows/ci.yml/badge.svg)](https://github.com/Guilh/gr-kart-game/actions/workflows/ci.yml) · **Play:** https://gr-kart-sakura-circuit.vercel.app
+
 A browser racing demo. You race seven AI karts round a fictional 860 m circuit lined with cherry trees, under Mt. Fuji. The kart and driver, the circuit, the scenery, every texture and every sound are generated in code at runtime. The project ships no model, image or audio files.
 
 It's built with Vite, TypeScript and Three.js.
