@@ -265,31 +265,65 @@ export class UI {
     return b;
   }
 
-  /** Like toggle(), but switching on asks for motion access first (iOS prompts here, inside the tap). */
-  private tiltToggle() {
+  /**
+   * "Tilt to steer" with a live check underneath: switching on asks for motion access (iOS prompts
+   * inside this tap), and while Settings is open the meter follows the device so the player can see
+   * that tilt works, or why it doesn't, before racing.
+   */
+  private tiltRow() {
+    const tilt = this.input.tilt;
     const b = h(`<button class="toggle" role="switch"></button>`) as HTMLButtonElement;
-    const upd = () => {
-      b.classList.toggle('on', settings.get('tiltSteer'));
-      b.setAttribute('aria-checked', String(settings.get('tiltSteer')));
+    const r = this.row('Tilt to steer', 'Hold the screen like a wheel: right thumb gas, left thumb brake', b);
+    r.classList.add('tiltrow');
+    const live = h(`<div class="tiltlive"><div class="tiltmeter"><i></i></div><p class="tiltstatus"></p><p class="hint">Turn on Rotation Lock first (swipe down from the top-right corner and tap the lock), or the screen flips while you steer.</p></div>`);
+    r.appendChild(live);
+    const dot = live.querySelector('.tiltmeter i') as HTMLElement;
+    const status = live.querySelector('.tiltstatus') as HTMLElement;
+    const TEXT: Record<string, string> = {
+      blocked:
+        "Motion access is blocked, so tilt can't work. Close this tab, reopen the game and tap Allow when asked. If you aren't asked, allow Motion & Orientation Access for Safari in the iPad's Settings app.",
+      'needs-tap': 'Tap the switch to allow motion access.',
+      waiting: 'Waiting for motion data…',
+      'no-sensor': 'No motion data from this device, so tilt steering is off. Use the steering pad.',
+      flat: 'Hold the screen up, facing you, like a steering wheel.',
     };
-    upd();
+    const render = () => {
+      const on = settings.get('tiltSteer');
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-checked', String(on));
+      const st = tilt.status;
+      live.classList.toggle('hidden', st === 'off');
+      live.classList.toggle('bad', st === 'blocked' || st === 'no-sensor');
+      if (st === 'ok') {
+        const a = Math.round(tilt.angle);
+        status.textContent = `Working. Turn the screen like a wheel: ${Math.abs(a) < 3 ? 'straight' : `${Math.abs(a)}° ${a > 0 ? 'right' : 'left'}`}.`;
+      } else status.textContent = TEXT[st] ?? '';
+      dot.style.transform = `translateX(${(st === 'ok' ? tilt.steer : 0) * 100}%)`;
+    };
     b.onclick = () => {
       audio.click();
       if (settings.get('tiltSteer')) {
         settings.set('tiltSteer', false);
-        this.input.tilt.disable();
-        upd();
+        tilt.disable();
+        tilt.failure = null;
+        render();
         this.handlers.settingChanged('tiltSteer');
         return;
       }
-      this.input.tilt.enable().then((ok) => {
-        if (ok) settings.set('tiltSteer', true);
-        else this.message('Motion access was declined. Allow it for this site in Safari settings to use tilt steering.', 'bad', 4);
-        upd();
+      tilt.enable().then((ok) => {
+        if (ok) {
+          settings.set('tiltSteer', true);
+          tilt.recenter();
+        }
+        render();
         this.handlers.settingChanged('tiltSteer');
       });
     };
-    return b;
+    // straight ahead for the check is however the device is held when Settings opens
+    tilt.recenter();
+    render();
+    const timer = window.setInterval(() => (r.isConnected ? render() : window.clearInterval(timer)), 100);
+    return r;
   }
 
   private row(label: string, hint: string, control: HTMLElement) {
@@ -410,7 +444,7 @@ export class UI {
     };
     el.appendChild(this.row('Volume', '', vol));
     el.appendChild(this.row('Steering assist', '', this.toggle('steeringAssist')));
-    if (TiltSteer.supported) el.appendChild(this.row('Tilt to steer', 'Hold the screen like a wheel: right thumb gas, left thumb brake', this.tiltToggle()));
+    if (TiltSteer.supported) el.appendChild(this.tiltRow());
     if (IS_TOUCH) el.appendChild(this.row('Auto-accelerate', 'The kart drives itself forward; you steer and brake', this.toggle('autoGas')));
     el.appendChild(this.row('Show FPS', '', this.toggle('showFps')));
     const actions = h(`<div class="actions"><button class="btn primary"><span>Done</span></button></div>`);

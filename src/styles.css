@@ -1313,6 +1313,52 @@ kbd {
   background: rgba(255, 255, 255, 0.5);
 }
 
+/* Settings › Tilt to steer: live check under the switch */
+.row.tiltrow {
+  flex-wrap: wrap;
+}
+.tiltlive {
+  flex-basis: 100%;
+  display: grid;
+  gap: 6px;
+}
+.tiltmeter {
+  position: relative;
+  height: 14px;
+  margin: 2px 7px;
+  border-radius: 7px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.16) 50%, rgba(255, 255, 255, 0.08));
+}
+/* the dot travels ±50% of the track: its 50%-wide box shifts by up to 100% of its own width */
+.tiltmeter i {
+  position: absolute;
+  left: 25%;
+  width: 50%;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  transition: transform 0.1s linear;
+}
+.tiltmeter i::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--paper);
+}
+.tiltstatus {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.tiltlive.bad .tiltstatus {
+  color: #ff6b78;
+}
+.tiltlive .hint {
+  margin: 0;
+}
+
 /* tilt steering: tall thumb zones on each edge, clear of the HUD buttons at the top */
 .touch .zone {
   position: absolute;

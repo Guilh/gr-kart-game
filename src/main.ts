@@ -30,6 +30,7 @@ class App {
   hudVisible = true;
   lastMode: 'race' | 'timetrial' = 'race';
   private last = performance.now();
+  private tiltTipShown = false;
   /** Earliest rAF timestamp the next frame may render at (frame cap). */
   private nextFrame = 0;
   private isTouch = IS_TOUCH;
@@ -63,6 +64,14 @@ class App {
     window.addEventListener('pointerdown', unlock, { once: true });
     window.addEventListener('keydown', unlock, { once: true });
     this.renderer.onQualityChange = () => this.world.env?.setShadowQuality(this.renderer.shadowSize);
+    // iPad Safari can't lock orientation, so turning the device like a wheel can flip the layout
+    const rotated = () => {
+      if (this.mode === 'race' && this.input.tilt.enabled) {
+        this.ui.message('The screen rotated. Turn on Rotation Lock, then pause and resume to re-centre the steering.', 'info', 5);
+      }
+    };
+    if (screen.orientation) screen.orientation.addEventListener('change', rotated);
+    else window.addEventListener('orientationchange', rotated);
     document.addEventListener('visibilitychange', () => {
       audio.setBackground(document.hidden);
       if (!document.hidden) this.last = performance.now();
@@ -168,7 +177,10 @@ class App {
       this.input.tilt.enable().then((ok) => {
         if (!ok) {
           settings.set('tiltSteer', false);
-          this.ui.message('Tilt steering needs motion access. Using the steering pad.', 'info', 3);
+          this.ui.message('Tilt steering needs motion access (see Settings). Using the steering pad.', 'bad', 4);
+        } else if (!this.tiltTipShown) {
+          this.tiltTipShown = true;
+          this.ui.message('Tilt steering: hold the screen like a wheel while the lights count down', 'info', 4);
         }
         this.ui.refreshTouch();
       });
@@ -218,6 +230,8 @@ class App {
 
   setPaused(p: boolean) {
     this.paused = p;
+    // resuming re-centres tilt steering on however the device is held now
+    if (!p && this.input.tilt.enabled) this.input.tilt.recenter();
     this.ui.showPause(p);
     audio.duck(p);
     if (p) audio.quietDriving();
